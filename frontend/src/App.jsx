@@ -7,6 +7,7 @@ import {
   Cpu, Terminal, User, LogOut
 } from 'lucide-react';
 import axios from 'axios';
+import SoftAurora from './components/SoftAurora';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -374,7 +375,14 @@ export default function App() {
 
   return (
     <div ref={containerRef} className="app-container" style={{ minHeight: '100vh', padding: '0 60px', display: 'flex', flexDirection: 'column' }}>
-      <div className="cinematic-bg" />
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0 }}>
+        <SoftAurora 
+          color1="#0f0c29" 
+          color2="#302b63" 
+          brightness={0.8}
+          speed={0.4}
+        />
+      </div>
       <HUDOverlay />
       <Navbar 
         onReset={() => { setView('hero'); setData(null); setAnalysisId(null); }} 
