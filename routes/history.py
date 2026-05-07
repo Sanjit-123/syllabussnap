@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, jsonify
 from bson import ObjectId
 from services.database import get_collection, is_connected
+from utils.auth_middleware import token_required
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +13,9 @@ history_bp = Blueprint("history", __name__)
 
 
 @history_bp.route("/history", methods=["GET"])
-def get_history():
-    """Retrieve all past analyses, sorted by most recent."""
+@token_required
+def get_history(current_user_id):
+    """Retrieve all past analyses for the current user, sorted by most recent."""
 
     if not is_connected():
         return jsonify({"error": "Database not available", "history": []}), 503
@@ -22,7 +24,7 @@ def get_history():
         collection = get_collection("analyses")
         analyses = list(
             collection.find(
-                {},
+                {"user_id": current_user_id},
                 {"raw_text_length": 0}  # Exclude raw text length from listing
             )
             .sort("created_at", -1)
@@ -43,15 +45,16 @@ def get_history():
 
 
 @history_bp.route("/history/<analysis_id>", methods=["GET"])
-def get_analysis(analysis_id):
-    """Retrieve a single analysis by ID."""
+@token_required
+def get_analysis(current_user_id, analysis_id):
+    """Retrieve a single analysis by ID, ensuring it belongs to the user."""
 
     if not is_connected():
         return jsonify({"error": "Database not available"}), 503
 
     try:
         collection = get_collection("analyses")
-        analysis = collection.find_one({"_id": ObjectId(analysis_id)})
+        analysis = collection.find_one({"_id": ObjectId(analysis_id), "user_id": current_user_id})
 
         if not analysis:
             return jsonify({"error": "Analysis not found"}), 404
@@ -68,15 +71,16 @@ def get_analysis(analysis_id):
 
 
 @history_bp.route("/history/<analysis_id>", methods=["DELETE"])
-def delete_analysis(analysis_id):
-    """Delete a single analysis."""
+@token_required
+def delete_analysis(current_user_id, analysis_id):
+    """Delete a single analysis belonging to the user."""
 
     if not is_connected():
         return jsonify({"error": "Database not available"}), 503
 
     try:
         collection = get_collection("analyses")
-        result = collection.delete_one({"_id": ObjectId(analysis_id)})
+        result = collection.delete_one({"_id": ObjectId(analysis_id), "user_id": current_user_id})
 
         if result.deleted_count == 0:
             return jsonify({"error": "Analysis not found"}), 404

@@ -4,7 +4,7 @@ import {
   Upload, Sparkles, BarChart3, Clock, Target,
   CheckCircle2, ChevronRight, Zap, Trophy,
   AlertCircle, Search, ArrowRight, Activity,
-  Cpu, Terminal
+  Cpu, Terminal, User, LogOut
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -19,16 +19,16 @@ const HUDOverlay = () => {
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }}>
       <div style={{ position: 'absolute', top: '40px', left: '40px', fontFamily: 'Space Mono', fontSize: '0.6rem', opacity: 0.3 }}>
-        CORE_OS_v1.0.4<br />STATUS: ACTIVE<br />LATENCY: 12ms
+        CORE_OS_v1.0.5<br />STATUS: ACTIVE<br />SEC_LEVEL: ALPHA
       </div>
       <div style={{ position: 'absolute', bottom: '40px', right: '40px', fontFamily: 'Space Mono', fontSize: '0.6rem', opacity: 0.3, textAlign: 'right' }}>
-        COORD_X: {coords.x}<br />COORD_Y: {coords.y}<br />SECURITY: ENCRYPTED
+        COORD_X: {coords.x}<br />COORD_Y: {coords.y}<br />AUTH: REQUIRED
       </div>
     </div>
   );
 };
 
-const Navbar = ({ onReset }) => (
+const Navbar = ({ onReset, user, onLogout, onLoginClick }) => (
   <nav style={{ padding: '40px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1400px', margin: '0 auto', width: '100%', position: 'relative', zIndex: 20 }}>
     <motion.div whileHover={{ x: 5 }} onClick={onReset} style={{ display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
       <div style={{ background: '#000', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -41,11 +41,84 @@ const Navbar = ({ onReset }) => (
         <div style={{ width: '6px', height: '6px', background: '#00ff00', borderRadius: '50%' }} />
         SERVER_CONNECTED
       </div>
-      <button className="btn-secondary" style={{ border: 'none', fontSize: '0.8rem' }}>MANIFESTO</button>
-      <button className="btn-premium" style={{ padding: '8px 24px', fontSize: '0.8rem' }}>ACCESS_PORTAL</button>
+      {user ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontFamily: 'Space Mono' }}>
+            <User size={16} /> {user.email}
+          </div>
+          <motion.button whileHover={{ scale: 1.05 }} onClick={onLogout} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.8rem' }}>
+            <LogOut size={16} /> LOGOUT
+          </motion.button>
+        </>
+      ) : (
+        <motion.button whileHover={{ scale: 1.05 }} onClick={onLoginClick} className="btn-premium" style={{ padding: '8px 24px', fontSize: '0.8rem' }}>
+          ACCESS_PORTAL
+        </motion.button>
+      )}
     </div>
   </nav>
 );
+
+const AuthForm = ({ mode, setMode, onAuthSuccess }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const endpoint = mode === 'signin' ? '/login' : '/register';
+      const res = await axios.post(`${API_BASE_URL}${endpoint}`, { email, password });
+      onAuthSuccess(res.data.token, res.data.user);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} style={{ maxWidth: '400px', margin: '100px auto', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', padding: '40px', backdropFilter: 'blur(10px)' }}>
+      <h2 style={{ fontSize: '2rem', marginBottom: '8px', letterSpacing: '-1px' }}>
+        {mode === 'signin' ? 'AUTHORIZATION' : 'SYSTEM_ENTRY'}
+      </h2>
+      <p style={{ color: 'var(--text-muted)', fontFamily: 'Space Mono', fontSize: '0.8rem', marginBottom: '32px' }}>
+        {mode === 'signin' ? 'ENTER CREDENTIALS TO CONTINUE' : 'INITIALIZE NEW CLEARANCE'}
+      </p>
+
+      {error && (
+        <div style={{ background: 'rgba(255,0,0,0.1)', border: '1px solid var(--accent-red)', color: 'var(--accent-red)', padding: '12px', fontSize: '0.8rem', fontFamily: 'Space Mono', marginBottom: '24px' }}>
+          [ERROR] {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div>
+          <label style={{ display: 'block', fontFamily: 'Space Mono', fontSize: '0.7rem', opacity: 0.7, marginBottom: '8px' }}>USER_ID [EMAIL]</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ width: '100%', background: 'transparent', border: '1px solid var(--glass-border)', padding: '12px', color: 'black', fontFamily: 'Space Mono', outline: 'none' }} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontFamily: 'Space Mono', fontSize: '0.7rem', opacity: 0.7, marginBottom: '8px' }}>PASSPHRASE</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} style={{ width: '100%', background: 'transparent', border: '1px solid var(--glass-border)', padding: '12px', color: 'black', fontFamily: 'Space Mono', outline: 'none' }} />
+        </div>
+        <button type="submit" disabled={loading} className="btn-premium" style={{ marginTop: '16px', padding: '16px', width: '100%' }}>
+          {loading ? 'PROCESSING...' : (mode === 'signin' ? 'INITIATE_LOGIN' : 'CREATE_ACCOUNT')}
+        </button>
+      </form>
+
+      <div style={{ marginTop: '24px', textAlign: 'center', fontFamily: 'Space Mono', fontSize: '0.7rem' }}>
+        {mode === 'signin' ? (
+          <span style={{ opacity: 0.6, cursor: 'pointer' }} onClick={() => setMode('signup')}>NO CLEARANCE? REQUEST_ACCESS</span>
+        ) : (
+          <span style={{ opacity: 0.6, cursor: 'pointer' }} onClick={() => setMode('signin')}>HAVE CLEARANCE? INITIATE_LOGIN</span>
+        )}
+      </div>
+    </motion.div>
+  );
+};
 
 const Hero = ({ onGetStarted }) => (
   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, x: -100 }} transition={{ duration: 0.8 }} style={{ textAlign: 'left', padding: '120px 0', maxWidth: '1400px', margin: '0 auto' }}>
@@ -64,7 +137,6 @@ const Hero = ({ onGetStarted }) => (
           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-premium" onClick={onGetStarted}>
             INITIALIZE_SCAN <ArrowRight size={20} />
           </motion.button>
-          <button className="btn-secondary">LEARN_MORE</button>
         </div>
       </div>
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end' }}>
@@ -93,27 +165,39 @@ const LoadingHUD = () => (
   </motion.div>
 );
 
-const UploadZone = ({ onUpload, loading }) => (
-  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="glass-card" style={{ padding: '120px 0', textAlign: 'center', maxWidth: '1200px', margin: '60px auto', border: '1px dashed var(--glass-border)', position: 'relative' }}>
-    <AnimatePresence>{loading && <LoadingHUD />}</AnimatePresence>
-    <div style={{ marginBottom: '40px' }}>
-      <motion.div animate={loading ? { scale: [1, 1.1, 1], opacity: [1, 0.5, 1] } : {}} transition={{ duration: 1.5, repeat: Infinity }}>
-        <Upload size={80} strokeWidth={0.5} />
-      </motion.div>
-    </div>
-    <h2 style={{ fontSize: '4rem', marginBottom: '16px', letterSpacing: '-3px' }}>SOURCE_UPLOAD</h2>
-    <p style={{ color: 'var(--text-muted)', marginBottom: '48px', fontFamily: 'Space Mono', fontSize: '1rem', letterSpacing: '2px' }}>ATTACH_MANIFEST [.PDF / .TXT]</p>
-    <input type="file" id="file-upload" accept=".pdf,.txt" style={{ display: 'none' }} onChange={(e) => onUpload(e.target.files[0])} disabled={loading} />
-    {!loading && (
-      <label htmlFor="file-upload">
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-premium" style={{ cursor: 'pointer', padding: '16px 48px' }}>BROWSE_FILES</motion.button>
-      </label>
-    )}
-    <div style={{ marginTop: '60px', display: 'flex', justifyContent: 'center', gap: '40px', opacity: 0.3, fontFamily: 'Space Mono', fontSize: '0.7rem' }}>
-      <div>[01] UPLOAD</div><div>[02] PARSE</div><div>[03] RANK</div><div>[04] OPTIMIZE</div>
-    </div>
-  </motion.div>
-);
+const UploadZone = ({ onUpload, loading }) => {
+  const fileInputRef = useRef(null);
+  
+  return (
+    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} className="glass-card" style={{ padding: '120px 0', textAlign: 'center', maxWidth: '1200px', margin: '60px auto', border: '1px dashed var(--glass-border)', position: 'relative' }}>
+      <AnimatePresence>{loading && <LoadingHUD />}</AnimatePresence>
+      <div style={{ marginBottom: '40px' }}>
+        <motion.div animate={loading ? { scale: [1, 1.1, 1], opacity: [1, 0.5, 1] } : {}} transition={{ duration: 1.5, repeat: Infinity }}>
+          <Upload size={80} strokeWidth={0.5} />
+        </motion.div>
+      </div>
+      <h2 style={{ fontSize: '4rem', marginBottom: '16px', letterSpacing: '-3px' }}>SOURCE_UPLOAD</h2>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '48px', fontFamily: 'Space Mono', fontSize: '1rem', letterSpacing: '2px' }}>ATTACH_MANIFEST [.PDF / .TXT]</p>
+      
+      <input type="file" ref={fileInputRef} accept=".pdf,.txt" style={{ display: 'none' }} onChange={(e) => onUpload(e.target.files[0])} disabled={loading} />
+      
+      {!loading && (
+        <motion.button 
+          whileHover={{ scale: 1.05 }} 
+          whileTap={{ scale: 0.95 }} 
+          className="btn-premium" 
+          style={{ cursor: 'pointer', padding: '16px 48px' }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          BROWSE_FILES
+        </motion.button>
+      )}
+      <div style={{ marginTop: '60px', display: 'flex', justifyContent: 'center', gap: '40px', opacity: 0.3, fontFamily: 'Space Mono', fontSize: '0.7rem' }}>
+        <div>[01] UPLOAD</div><div>[02] PARSE</div><div>[03] RANK</div><div>[04] OPTIMIZE</div>
+      </div>
+    </motion.div>
+  );
+};
 
 const Dashboard = ({ data, analysisId, onStatusChange }) => {
   const [examMode, setExamMode] = useState(false);
@@ -178,28 +262,46 @@ const Dashboard = ({ data, analysisId, onStatusChange }) => {
           ))}
         </AnimatePresence>
       </div>
-
-      {data.topics.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} style={{ marginTop: '100px', padding: '60px', background: '#000', color: '#fff', border: '1px solid #000', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: '20px', right: '20px' }}><Terminal size={24} opacity={0.3} /></div>
-          <div className="badge" style={{ borderColor: '#fff', color: '#fff', marginBottom: '32px' }}>SYSTEM_RECOMMENDATION</div>
-          <h3 style={{ fontSize: '2.5rem', marginBottom: '24px' }}>FOCUS_DIRECTIVE_01</h3>
-          <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: '1.6', fontSize: '1.1rem', fontFamily: 'Space Mono', maxWidth: '800px' }}>
-            PRIMARY ANALYSIS SUGGESTS <span style={{ color: '#fff', fontWeight: 700 }}>{data.topics[0].title}</span> AS THE CRITICAL PATH.
-            SYLLABUS TOPOLOGY INDICATES UNIT {data.topics[0].unit} HAS A HIGH FREQUENCY OVERLAP WITH CORE LEARNING OBJECTIVES.
-          </p>
-        </motion.div>
-      )}
     </motion.div>
   );
 };
 
 export default function App() {
-  const [view, setView] = useState('hero');
+  const [view, setView] = useState('hero'); // hero, upload, dashboard, signin, signup
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [analysisId, setAnalysisId] = useState(null);
   const containerRef = useRef(null);
+
+  // Auth State
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')) || null);
+
+  const handleAuthSuccess = (newToken, newUser) => {
+    setToken(newToken);
+    setUser(newUser);
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setView('upload');
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setView('hero');
+    setData(null);
+    setAnalysisId(null);
+  };
+
+  const handleGetStarted = () => {
+    if (token) {
+      setView('upload');
+    } else {
+      setView('signin');
+    }
+  };
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -214,24 +316,37 @@ export default function App() {
 
   const handleUpload = async (file) => {
     if (!file) return;
+    if (!token) {
+      alert("Session expired. Please log in again.");
+      handleLogout();
+      return;
+    }
     setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await axios.post(`${API_BASE_URL}/analyze`, formData);
+      const res = await axios.post(`${API_BASE_URL}/analyze`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setData(res.data);
       setAnalysisId(res.data.analysis_id || null);
       setView('dashboard');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
-      const msg = err.response?.data?.error || 'Backend unreachable. Is the server running?';
-      alert(`ERROR: ${msg}`);
+      if (err.response?.status === 401) {
+        alert("Session expired. Please log in again.");
+        handleLogout();
+      } else {
+        const msg = err.response?.data?.error || 'Backend unreachable. Is the server running?';
+        alert(`ERROR: ${msg}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const toggleStatus = async (id) => {
+    if (!token) return;
     const topic = data.topics.find(t => t.id === id);
     if (!topic) return;
     const newStatus = topic.status === 'completed' ? 'pending' : 'completed';
@@ -243,9 +358,16 @@ export default function App() {
 
     if (analysisId) {
       try {
-        await axios.patch(`${API_BASE_URL}/analysis/${analysisId}/topic/${id}`, { status: newStatus });
+        await axios.patch(`${API_BASE_URL}/analysis/${analysisId}/topic/${id}`, { status: newStatus }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       } catch (err) {
-        console.warn('Could not persist status to DB:', err.message);
+        if (err.response?.status === 401) {
+          alert("Session expired. Please log in again.");
+          handleLogout();
+        } else {
+          console.warn('Could not persist status to DB:', err.message);
+        }
       }
     }
   };
@@ -254,10 +376,16 @@ export default function App() {
     <div ref={containerRef} className="app-container" style={{ minHeight: '100vh', padding: '0 60px', display: 'flex', flexDirection: 'column' }}>
       <div className="cinematic-bg" />
       <HUDOverlay />
-      <Navbar onReset={() => { setView('hero'); setData(null); setAnalysisId(null); }} />
+      <Navbar 
+        onReset={() => { setView('hero'); setData(null); setAnalysisId(null); }} 
+        user={user} 
+        onLogout={handleLogout} 
+        onLoginClick={() => setView('signin')}
+      />
       <main style={{ width: '100%', position: 'relative', zIndex: 1 }}>
         <AnimatePresence mode="wait">
-          {view === 'hero' && <Hero key="hero" onGetStarted={() => setView('upload')} />}
+          {view === 'hero' && <Hero key="hero" onGetStarted={handleGetStarted} />}
+          {(view === 'signin' || view === 'signup') && <AuthForm key="auth" mode={view} setMode={setView} onAuthSuccess={handleAuthSuccess} />}
           {view === 'upload' && <UploadZone key="upload" onUpload={handleUpload} loading={loading} />}
           {view === 'dashboard' && data && <Dashboard key="dashboard" data={data} analysisId={analysisId} onStatusChange={toggleStatus} />}
         </AnimatePresence>

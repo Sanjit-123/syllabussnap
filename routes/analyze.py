@@ -9,6 +9,7 @@ from bson import ObjectId
 from services.parser import extract_text, extract_topics, allowed_file
 from services.ranker import rank_topics
 from services.database import get_collection, is_connected
+from utils.auth_middleware import token_required
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ analyze_bp = Blueprint("analyze", __name__)
 
 
 @analyze_bp.route("/analyze", methods=["POST"])
-def analyze():
+@token_required
+def analyze(current_user_id):
     """Upload a syllabus file, extract topics, rank them, and optionally save to MongoDB."""
 
     file = request.files.get("file")
@@ -49,6 +51,7 @@ def analyze():
             collection = get_collection("analyses")
             if collection is not None:
                 doc = {
+                    "user_id": current_user_id,
                     "filename": file.filename,
                     "topics": result["topics"],
                     "summary": result["summary"],
@@ -79,7 +82,8 @@ def analyze():
 
 
 @analyze_bp.route("/analysis/<analysis_id>/topic/<int:topic_id>", methods=["PATCH"])
-def update_topic_status(analysis_id, topic_id):
+@token_required
+def update_topic_status(current_user_id, analysis_id, topic_id):
     """Update the status of a specific topic within a saved analysis."""
 
     if not is_connected():
@@ -95,8 +99,9 @@ def update_topic_status(analysis_id, topic_id):
 
     try:
         collection = get_collection("analyses")
+        # Ensure the user only updates their own analysis
         result = collection.update_one(
-            {"_id": ObjectId(analysis_id), "topics.id": topic_id},
+            {"_id": ObjectId(analysis_id), "user_id": current_user_id, "topics.id": topic_id},
             {"$set": {"topics.$.status": new_status}}
         )
 

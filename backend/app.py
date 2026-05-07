@@ -40,7 +40,11 @@ def create_app():
     if not db_connected:
         logger.warning("⚠️  Running WITHOUT database — analyses will NOT be persisted.")
 
-    # --- Register Blueprints ---
+    from routes.analyze import analyze_bp
+    from routes.history import history_bp
+    from routes.auth import auth_bp
+    
+    app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(analyze_bp, url_prefix="/api")
     app.register_blueprint(history_bp, url_prefix="/api")
 
