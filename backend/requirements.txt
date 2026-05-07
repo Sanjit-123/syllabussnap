@@ -6,3 +6,4 @@ pypdf
 gunicorn
 certifi
 dnspython
+PyJWT
